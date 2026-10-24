@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 590" width="960" height="590" role="img" aria-labelledby="title desc">
+  <title id="title">YODOQ entity model</title>
+  <desc id="desc">JobQueue stores JobRecords. Clock supplies now. lease returns a LeasedJob. stats returns Stats.</desc>
+  <rect width="960" height="590" fill="#f4f0e6"/>
+  <text x="32" y="36" fill="#1c1917" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="700">YODOQ</text>
+  <text x="118" y="36" fill="#57534e" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="14">entity model of solution/queue.py</text>
+
+  <line x1="204" y1="170" x2="328" y2="170" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="212" y1="162" x2="212" y2="178" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="218" y1="162" x2="218" y2="178" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="314" y1="162" x2="314" y2="178" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="320" y1="162" x2="320" y2="178" stroke="#44403c" stroke-width="1.5"/>
+  <rect x="236" y="156" width="52" height="16" fill="#f4f0e6"/>
+  <text x="262" y="168" text-anchor="middle" fill="#44403c" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">now()</text>
+
+  <line x1="548" y1="170" x2="668" y2="170" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="556" y1="162" x2="556" y2="178" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="562" y1="162" x2="562" y2="178" stroke="#44403c" stroke-width="1.5"/>
+  <circle cx="674" cy="170" r="5" fill="#f4f0e6" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="682" y1="170" x2="692" y2="158" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="682" y1="170" x2="692" y2="170" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="682" y1="170" x2="692" y2="182" stroke="#44403c" stroke-width="1.5"/>
+  <rect x="586" y="156" width="40" height="16" fill="#f4f0e6"/>
+  <text x="606" y="168" text-anchor="middle" fill="#44403c" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">jobs</text>
+
+  <line x1="438" y1="232" x2="438" y2="328" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="430" y1="240" x2="446" y2="240" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="430" y1="246" x2="446" y2="246" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="430" y1="314" x2="446" y2="314" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="430" y1="320" x2="446" y2="320" stroke="#44403c" stroke-width="1.5"/>
+  <rect x="446" y="268" width="54" height="16" fill="#f4f0e6"/>
+  <text x="473" y="280" text-anchor="middle" fill="#44403c" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">stats()</text>
+
+  <line x1="812" y1="275" x2="812" y2="334" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="804" y1="283" x2="820" y2="283" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="804" y1="289" x2="820" y2="289" stroke="#44403c" stroke-width="1.5"/>
+  <circle cx="812" cy="346" r="5" fill="#f4f0e6" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="812" y1="352" x2="812" y2="360" stroke="#44403c" stroke-width="1.5"/>
+  <line x1="804" y1="354" x2="820" y2="354" stroke="#44403c" stroke-width="1.5"/>
+  <rect x="824" y="300" width="52" height="16" fill="#f4f0e6"/>
+  <text x="850" y="312" text-anchor="middle" fill="#44403c" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">lease()</text>
+
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="28" y="120" width="176" height="100" rx="8" fill="#fffdf8" stroke="#44403c" stroke-width="1.25"/>
+    <path d="M36 120 h160 a8 8 0 0 1 8 8 v26 h-176 v-26 a8 8 0 0 1 8-8z" fill="#44403c"/>
+    <text x="116" y="142" text-anchor="middle" fill="#fffdf8" font-size="14" font-weight="700">Clock</text>
+    <text x="42" y="178" fill="#1c1917" font-size="13">now(): int</text>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="328" y="108" width="220" height="124" rx="8" fill="#fffdf8" stroke="#1e3a5f" stroke-width="1.25"/>
+    <path d="M336 108 h204 a8 8 0 0 1 8 8 v26 h-220 v-26 a8 8 0 0 1 8-8z" fill="#1e3a5f"/>
+    <text x="438" y="130" text-anchor="middle" fill="#fffdf8" font-size="14" font-weight="700">JobQueue</text>
+    <text x="342" y="166" fill="#1c1917" font-size="13">next_id: int</text>
+    <text x="342" y="188" fill="#57534e" font-size="12">one process, in memory</text>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="692" y="65" width="240" height="210" rx="8" fill="#fffdf8" stroke="#7c2d12" stroke-width="1.25"/>
+    <path d="M700 65 h224 a8 8 0 0 1 8 8 v26 h-240 v-26 a8 8 0 0 1 8-8z" fill="#7c2d12"/>
+    <text x="812" y="87" text-anchor="middle" fill="#fffdf8" font-size="14" font-weight="700">JobRecord</text>
+    <text x="706" y="121" fill="#1c1917" font-size="13" text-decoration="underline">id: str</text>
+    <text x="860" y="121" fill="#9a3412" font-size="11" font-weight="700">PK</text>
+    <text x="706" y="143" fill="#1c1917" font-size="13">payload: bytes</text>
+    <text x="706" y="165" fill="#1c1917" font-size="13">status: str</text>
+    <text x="706" y="187" fill="#1c1917" font-size="13">worker_id: str</text>
+    <text x="706" y="209" fill="#1c1917" font-size="13">lease_expires_at: int</text>
+    <text x="706" y="231" fill="#1c1917" font-size="13">attempts: int</text>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="328" y="328" width="220" height="132" rx="8" fill="#fffdf8" stroke="#334155" stroke-width="1.25"/>
+    <path d="M336 328 h204 a8 8 0 0 1 8 8 v26 h-220 v-26 a8 8 0 0 1 8-8z" fill="#334155"/>
+    <text x="438" y="350" text-anchor="middle" fill="#fffdf8" font-size="14" font-weight="700">Stats</text>
+    <text x="342" y="386" fill="#1c1917" font-size="13">pending: int</text>
+    <text x="342" y="408" fill="#1c1917" font-size="13">leased: int</text>
+    <text x="342" y="430" fill="#1c1917" font-size="13">completed: int</text>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="692" y="360" width="240" height="128" rx="8" fill="#fffdf8" stroke="#14532d" stroke-width="1.25"/>
+    <path d="M700 360 h224 a8 8 0 0 1 8 8 v26 h-240 v-26 a8 8 0 0 1 8-8z" fill="#14532d"/>
+    <text x="812" y="382" text-anchor="middle" fill="#fffdf8" font-size="14" font-weight="700">LeasedJob</text>
+    <text x="706" y="418" fill="#1c1917" font-size="13">id: str</text>
+    <text x="706" y="440" fill="#1c1917" font-size="13">payload: bytes</text>
+    <text x="706" y="462" fill="#1c1917" font-size="13">lease_expires_at: int</text>
+  </g>
+
+  <text x="32" y="530" fill="#57534e" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13">status is PENDING, LEASED, or COMPLETED. lease sets LEASED. ack by worker_id sets COMPLETED.</text>
+  <text x="32" y="552" fill="#57534e" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13">fail, or now &gt;= lease_expires_at, sets PENDING. An ack from anyone else is rejected.</text>
+  <text x="32" y="574" fill="#a8a29e" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12">Bars (||) mean exactly one. A circle with a crow foot means zero or more. A circle with one bar means zero or one.</text>
+</svg>
