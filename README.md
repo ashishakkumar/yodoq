@@ -2,7 +2,7 @@
 
 **Y**our **O**wn **D**on't-**D**rop **Q**ueue, implemented in Python 3.
 
-A single-process, in-memory job queue. Workers can crash mid-job and acks can vanish in transit. The same job is leased again until a holder acks it, so work is delivered at least once, and duplicate runs stay bounded by how often those failures happen.
+A single-process job queue, in-memory by default. Workers can crash mid-job and acks can vanish in transit. By default the same job is leased again until a holder acks it, so work is delivered at least once, and duplicate runs stay bounded by how often those failures happen.
 
 ## Getting started
 
@@ -16,24 +16,22 @@ A single-process, in-memory job queue. Workers can crash mid-job and acks can va
 
 ![YODOQ entity model](docs/yodoq-er.svg)
 
-`New(clock)` returns a `JobQueue`. The clock only needs `now()` in milliseconds. The harness owns a `TestClock` and advances it, so lease expiry happens without sleeping.
+`New(clock)` returns a `JobQueue`. Optional `max_attempts` and `path` default to `None`: no cap and no file. The default remains retry-until-ack and in-memory. The clock only needs `now()` in milliseconds. The harness owns a `TestClock` and advances it, so lease expiry happens without sleeping.
 
 Each job is one `JobRecord` in a dict, keyed by `job-1`, `job-2`, and so on. Dict order is the queue order. `enqueue` copies the payload with `bytes()` and stores the record as `PENDING`.
 
-`lease(worker_id, lease_ms)` reclaims expired leases, then takes the first `PENDING` record. It sets `LEASED`, records `worker_id`, sets `lease_expires_at` to `now() + lease_ms`, increments `attempts`, and moves that record to the end of the dict so the next pending job is served first. The caller receives a `LeasedJob` (`id`, `payload`, `lease_expires_at`). An empty queue returns `None`.
+`lease(worker_id, lease_ms)` reclaims expired leases, then takes the first `PENDING` record. When `max_attempts` is set, a `PENDING` record whose `attempts` is already at the cap is marked `EXHAUSTED` and skipped; the lease that reached the count still ran. It sets `LEASED`, records `worker_id`, sets `lease_expires_at` to `now() + lease_ms`, increments `attempts`, and moves that record to the end of the dict so the next pending job is served first. The caller receives a `LeasedJob` (`id`, `payload`, `lease_expires_at`). An empty queue returns `None`.
 
 `ack(worker_id, job_id)` completes the job only when that worker still holds a live lease. Any other caller, including the worker whose lease has since expired or been given to someone else, gets `ValueError`. `fail` uses the same ownership check and returns the record to `PENDING` immediately.
 
-`stats()` reclaims expired leases first, then counts `pending`, `leased`, and `completed`. An expired lease therefore shows up as pending.
+`stats()` reclaims expired leases first, then counts `pending`, `leased`, `completed`, and `exhausted`, and lists `leased_jobs` as `(id, worker_id, lease_expires_at, attempts)`. An expired lease therefore shows up as pending. `EXHAUSTED` is not counted as pending or leased.
 
 | Piece | Where | Role |
 |---|---|---|
 | `JobQueue`, `LeasedJob`, `Stats`, `New` | `solution/queue.py` | The queue |
 | Package exports | `solution/__init__.py` | `import solution` |
 | `TestClock`, `Worker`, `FailureSimulator`, `ExecutionLedger` | `main.py` | Three-level harness |
-| Entity diagram | `docs/yodoq-er.svg` | The figure above. `docs/yodoq-er.drawio` is the same diagram for draw.io |
-
-`main.go`, `solution/queue.go`, and `go.mod` are the original Go exercise. `Enqueue`, `Lease`, `Ack`, `Fail`, and `Stats` there still return "not implemented". The running code is the Python package.
+| Entity diagram | `docs/yodoq-er.svg` | The figure above |
 
 ## Implementation levels
 
@@ -104,8 +102,8 @@ Met by `python3 main.py` on the current queue:
 
 ## What this queue leaves out
 
-`attempts` increments on every `lease` and is not a cap. A job is retried until some holder acks it.
+By default, `attempts` increments on every `lease` and is not a cap. A job is retried until some holder acks it. The opt-in knob is `max_attempts`.
 
-There is one dict in one process. Callers are serialized by the Python process. A restart drops every record. `stats()` is the operator view: three counts, after expired leases have been returned to `PENDING`.
+There is one dict in one process. Callers are serialized by the Python process. By default a restart drops every record. The opt-in knob is `path`. `stats()` reclaims expired leases first, then reports `pending`, `leased`, `completed`, `exhausted`, and `leased_jobs`.
 
 Lease order is FIFO via dict order, with a retried job moved to the back. The harness round-robins its five workers. The queue does not rank jobs or assign workers.

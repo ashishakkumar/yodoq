@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YODOQ level 1</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f5;
+    --fg: #1b1b1b;
+    --muted: #4a4a4a;
+    --line: #c8c8c4;
+    --changed: #eeeae2;
+    --code: #f0f0ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #f2f2f0;
+      --muted: #c4c4c0;
+      --line: #3a3a3a;
+      --changed: #2c2a26;
+      --code: #111111;
+    }
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 16px/1.45 system-ui, sans-serif;
+  }
+  main {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 16px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  h1, h2, h3 { font-weight: 500; margin: 0; }
+  h1 { font-size: 1.25rem; }
+  h2, h3 { font-size: 1rem; }
+  p { margin: 0; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #pos { flex-basis: 100%; font-weight: 500; }
+  button {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--line);
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+  button:disabled { color: var(--muted); }
+  button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  #next { border-color: var(--fg); font-weight: 500; }
+  #panel { display: flex; flex-direction: column; gap: 12px; }
+  #input, #output, .code-grid {
+    background: var(--code);
+    padding: 8px 12px;
+    margin: 0;
+  }
+  #input, #output {
+    font: 400 16px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+  }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 40rem; }
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: baseline;
+  }
+  th { font-weight: 500; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  tr.changed { background: var(--changed); font-weight: 500; }
+  #meta { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  #code { display: flex; flex-direction: column; gap: 12px; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  figcaption { margin: 0; }
+  .code-grid {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    overflow-x: auto;
+    font: 400 16px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .code-grid pre { margin: 0; }
+  .lns { color: var(--muted); text-align: right; user-select: none; }
+  nav { display: flex; flex-direction: column; gap: 12px; }
+  caption { caption-side: top; text-align: left; font-weight: 500; padding: 0 0 8px; }
+  #title { scroll-margin-top: 16px; }
+  #list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  #list button { width: 100%; text-align: left; }
+  #list button[aria-current="step"] { border-color: var(--fg); font-weight: 500; }
+  @media (min-width: 40rem) {
+    #list { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="sr-only">Step through level 1 of the YODOQ queue. Each step shows the call, the return value, the jobs afterward, and the code that ran.</p>
+  <h1>Level 1</h1>
+  <p>This queue is one job handed to a worker, not a multi-step workflow.</p>
+  <div class="controls">
+    <p id="pos" aria-live="polite" aria-atomic="true">Step 1 of 22</p>
+    <button type="button" id="prev">Previous</button>
+    <button type="button" id="next">Next</button>
+  </div>
+  <article id="panel">
+    <h2 id="title">Empty queue</h2>
+    <p id="story"></p>
+    <h3>Input</h3>
+    <pre id="input"></pre>
+    <h3>Output</h3>
+    <pre id="output"></pre>
+    <h3>Queue</h3>
+    <p id="queue-note" hidden></p>
+    <p id="meta"></p>
+    <div class="scroll" tabindex="0" aria-label="Jobs in dict order">
+      <table>
+        <caption>Dict order</caption>
+        <thead>
+          <tr>
+            <th scope="col">id</th>
+            <th scope="col">payload</th>
+            <th scope="col">status</th>
+            <th scope="col">worker_id</th>
+            <th scope="col" class="num">lease_expires_at</th>
+            <th scope="col" class="num">attempts</th>
+          </tr>
+        </thead>
+        <tbody id="jobs"></tbody>
+      </table>
+    </div>
+    <h3>Code</h3>
+    <div id="code"></div>
+  </article>
+  <nav aria-label="Steps">
+    <h2>Steps</h2>
+    <ol id="list"></ol>
+  </nav>
+</main>
+<script>
+(function () {
+  var steps = [{"title": "Empty queue", "story": "A test clock starts at 0, and New(clock) makes an empty queue with max_attempts None and path None.", "input": "TestClock()\nNew(clock)", "output": "jobs={}, next_id=0, max_attempts=None, path=None", "now": 0, "next_id": 0, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [], "snippets": [{"file": "main.py", "start": 8, "lines": ["    def __init__(self) -> None:", "        self._now: int = 0"]}, {"file": "main.py", "start": 159, "lines": ["    clock = TestClock()", "    q = solution.New(clock)"]}, {"file": "solution/queue.py", "start": 227, "lines": ["def New(clock, max_attempts=None, path=None) -> JobQueue:", "    return JobQueue(clock, max_attempts=max_attempts, path=path)"]}, {"file": "solution/queue.py", "start": 44, "lines": ["    def __init__(self, clock, max_attempts=None, path=None) -> None:", "        self.clock = clock", "        self.max_attempts = max_attempts", "        self.path = path", "        self.jobs: Dict[str, JobRecord] = {}", "        self.next_id: int = 0", "        self._load()"]}]}, {"title": "Enqueue hello", "story": "enqueue saves b\"hello\" as job-1, PENDING, with attempts 0 and no worker.", "input": "q.enqueue(b\"hello\")", "output": "'job-1'", "now": 0, "next_id": 1, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}], "snippets": [{"file": "main.py", "start": 164, "lines": ["        job_id = q.enqueue(b\"hello\")"]}, {"file": "solution/queue.py", "start": 32, "lines": ["    status: str = \"PENDING\"       # PENDING -> LEASED -> COMPLETED, or EXHAUSTED", "    worker_id: str = \"\"           # Current lease holder", "    lease_expires_at: int = 0     # Timestamp (ms) when the lease expires", "    attempts: int = 0             # Retry counter"]}, {"file": "solution/queue.py", "start": 118, "lines": ["        self.next_id += 1", "        job_id = f\"job-{self.next_id}\"", "", "        self.jobs[job_id] = JobRecord(", "            id=job_id,", "            payload=bytes(payload),", "            status=\"PENDING\",", "        )", "        self._persist()", "        return job_id"]}]}, {"title": "Lease job-1", "story": "worker-1 leases job-1 with lease_expires_at 5000 and attempts 1, after reclaim finds nothing expired, and the only job moves to the end of the dict.", "input": "q.lease(\"worker-1\", 5000)", "output": "LeasedJob(id='job-1', payload=b'hello', lease_expires_at=5000)", "now": 0, "next_id": 1, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "LEASED", "worker": "worker-1", "exp": 5000, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 171, "lines": ["        job = q.lease(\"worker-1\", 5000)"]}, {"file": "solution/queue.py", "start": 134, "lines": ["        self._reclaim_expired_leases()"]}, {"file": "solution/queue.py", "start": 145, "lines": ["            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1", "", "            # Move to the back of the dict for fair FIFO round-robin ordering", "            del self.jobs[job_id]", "            self.jobs[job_id] = job", "            self._persist()", "", "            return LeasedJob(", "                id=job.id,", "                payload=job.payload,", "                lease_expires_at=job.lease_expires_at,", "            )"]}]}, {"title": "Ack job-1", "story": "ack sets job-1 to COMPLETED, clears worker_id, and sets lease_expires_at to 0. attempts stays 1.", "input": "q.ack(\"worker-1\", job.id)", "output": "None", "now": 0, "next_id": 1, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 185, "lines": ["        q.ack(\"worker-1\", job.id)"]}, {"file": "solution/queue.py", "start": 174, "lines": ["        if job.status != \"LEASED\" or job.worker_id != worker_id:", "            raise ValueError(", "                f\"Stale Ack rejected: worker {worker_id} does not hold active lease for {job_id}\"", "            )", "", "        job.status = \"COMPLETED\"", "        job.worker_id = \"\"", "        job.lease_expires_at = 0", "        self._persist()"]}]}, {"title": "Lease returns none", "story": "lease returns None and leaves job-1 unchanged, because a COMPLETED job is skipped.", "input": "q.lease(\"worker-1\", 5000)", "output": "None", "now": 0, "next_id": 1, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}], "snippets": [{"file": "main.py", "start": 191, "lines": ["    if q.lease(\"worker-1\", 5000) is None:"]}, {"file": "solution/queue.py", "start": 136, "lines": ["        for job_id, job in list(self.jobs.items()):", "            if job.status != \"PENDING\":", "                continue"]}, {"file": "solution/queue.py", "start": 161, "lines": ["        return None"]}]}, {"title": "First of ten enqueues", "story": "The ten-job loop runs enqueue ten times. This step is i = 0, payload b\"job-0\", saved as job-2.", "input": "q.enqueue(f\"job-{i}\".encode())\ni = 0", "output": "'job-2'", "now": 0, "next_id": 2, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}], "snippets": [{"file": "main.py", "start": 197, "lines": ["    for i in range(10):", "        q.enqueue(f\"job-{i}\".encode())"]}, {"file": "solution/queue.py", "start": 118, "lines": ["        self.next_id += 1", "        job_id = f\"job-{self.next_id}\"", "", "        self.jobs[job_id] = JobRecord(", "            id=job_id,", "            payload=bytes(payload),", "            status=\"PENDING\",", "        )", "        self._persist()", "        return job_id"]}]}, {"title": "Ten jobs pending", "story": "The other nine calls add job-3 through job-11, all PENDING with attempts 0. job-1 stays COMPLETED, and next_id is 11.", "input": "q.enqueue(f\"job-{i}\".encode())\nfor i in range(1, 10)", "output": "'job-3', 'job-4', 'job-5', 'job-6', 'job-7', 'job-8', 'job-9', 'job-10', 'job-11'", "now": 0, "next_id": 11, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-4", "payload": "b'job-2'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-5", "payload": "b'job-3'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-6", "payload": "b'job-4'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-7", "payload": "b'job-5'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-8", "payload": "b'job-6'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-9", "payload": "b'job-7'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-10", "payload": "b'job-8'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}, {"id": "job-11", "payload": "b'job-9'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}], "snippets": [{"file": "main.py", "start": 197, "lines": ["    for i in range(10):", "        q.enqueue(f\"job-{i}\".encode())"]}]}, {"title": "Lease and ack job-2", "story": "The loop leases job-2, moves it to the end of the dict, then acks it, so attempts is 1 and the worker and deadline are cleared.", "input": "j = q.lease(\"worker-1\", 5000)\nq.ack(\"worker-1\", j.id)", "output": "LeasedJob(id='job-2', payload=b'job-0', lease_expires_at=5000)\nNone", "now": 0, "next_id": 11, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 200, "lines": ["    leased = 0", "    while True:", "        j = q.lease(\"worker-1\", 5000)", "        if j is None:", "            break", "        q.ack(\"worker-1\", j.id)", "        leased += 1"]}, {"file": "solution/queue.py", "start": 145, "lines": ["            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1", "", "            # Move to the back of the dict for fair FIFO round-robin ordering", "            del self.jobs[job_id]", "            self.jobs[job_id] = job"]}, {"file": "solution/queue.py", "start": 179, "lines": ["        job.status = \"COMPLETED\"", "        job.worker_id = \"\"", "        job.lease_expires_at = 0"]}]}, {"title": "Eleven completed", "story": "The loop leases and acks job-3 through job-11. leased ends at 10, the next lease returns None, and all 11 jobs are COMPLETED in id order.", "input": "q.lease(\"worker-1\", 5000)\nq.ack(\"worker-1\", j.id)\nfor job-3 through job-11, then lease returns None", "output": "leased = 10", "now": 0, "next_id": 11, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 200, "lines": ["    leased = 0", "    while True:", "        j = q.lease(\"worker-1\", 5000)", "        if j is None:", "            break", "        q.ack(\"worker-1\", j.id)", "        leased += 1", "", "    if leased == 10:"]}]}, {"title": "Enqueue to-fail", "story": "enqueue saves b\"to-fail\" as job-12, PENDING, with attempts 0.", "input": "q.enqueue(b\"to-fail\")", "output": "'job-12'", "now": 0, "next_id": 12, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}], "snippets": [{"file": "main.py", "start": 214, "lines": ["    q.enqueue(b\"to-fail\")"]}, {"file": "solution/queue.py", "start": 118, "lines": ["        self.next_id += 1", "        job_id = f\"job-{self.next_id}\"", "", "        self.jobs[job_id] = JobRecord(", "            id=job_id,", "            payload=bytes(payload),", "            status=\"PENDING\",", "        )", "        self._persist()", "        return job_id"]}]}, {"title": "Lease job-12", "story": "worker-1 leases job-12, attempts becomes 1, and lease_expires_at is 0 + 5000.", "input": "j1 = q.lease(\"worker-1\", 5000)", "output": "LeasedJob(id='job-12', payload=b'to-fail', lease_expires_at=5000)", "now": 0, "next_id": 12, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "LEASED", "worker": "worker-1", "exp": 5000, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 215, "lines": ["    j1 = q.lease(\"worker-1\", 5000)"]}, {"file": "solution/queue.py", "start": 145, "lines": ["            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1"]}]}, {"title": "Fail job-12", "story": "fail sets job-12 back to PENDING and clears the worker and deadline. attempts stays 1.", "input": "q.fail(\"worker-1\", j1.id)", "output": "None", "now": 0, "next_id": 12, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 219, "lines": ["    q.fail(\"worker-1\", j1.id)"]}, {"file": "solution/queue.py", "start": 195, "lines": ["        if job.status != \"LEASED\" or job.worker_id != worker_id:", "            raise ValueError(", "                f\"Invalid Fail: worker {worker_id} does not hold lease for {job_id}\"", "            )", "", "        job.status = \"PENDING\"", "        job.worker_id = \"\"", "        job.lease_expires_at = 0", "        self._persist()"]}]}, {"title": "Same id for worker-2", "story": "worker-2 leases the same id, job-12. attempts becomes 2, and lease_expires_at is 5000 again.", "input": "j2 = q.lease(\"worker-2\", 5000)", "output": "LeasedJob(id='job-12', payload=b'to-fail', lease_expires_at=5000)", "now": 0, "next_id": 12, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "LEASED", "worker": "worker-2", "exp": 5000, "attempts": 2, "changed": true}], "snippets": [{"file": "main.py", "start": 220, "lines": ["    j2 = q.lease(\"worker-2\", 5000)"]}, {"file": "solution/queue.py", "start": 145, "lines": ["            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1"]}]}, {"title": "Ack job-12", "story": "worker-2 acks job-12, so it is COMPLETED with a cleared worker, deadline 0, and attempts 2.", "input": "q.ack(\"worker-2\", j2.id)", "output": "None", "now": 0, "next_id": 12, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": true}], "snippets": [{"file": "main.py", "start": 226, "lines": ["        q.ack(\"worker-2\", j2.id)"]}, {"file": "solution/queue.py", "start": 179, "lines": ["        job.status = \"COMPLETED\"", "        job.worker_id = \"\"", "        job.lease_expires_at = 0", "        self._persist()"]}]}, {"title": "Enqueue stale", "story": "enqueue saves b\"stale\" as job-13, PENDING, with attempts 0.", "input": "q.enqueue(b\"stale\")", "output": "'job-13'", "now": 0, "next_id": 13, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": false}, {"id": "job-13", "payload": "b'stale'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}], "snippets": [{"file": "main.py", "start": 229, "lines": ["    q.enqueue(b\"stale\")"]}, {"file": "solution/queue.py", "start": 118, "lines": ["        self.next_id += 1", "        job_id = f\"job-{self.next_id}\"", "", "        self.jobs[job_id] = JobRecord(", "            id=job_id,", "            payload=bytes(payload),", "            status=\"PENDING\",", "        )", "        self._persist()", "        return job_id"]}]}, {"title": "Lease for 1000 ms", "story": "worker-1 leases job-13 for 1000 ms, so lease_expires_at is 0 + 1000 and attempts becomes 1.", "input": "s1 = q.lease(\"worker-1\", 1000)", "output": "LeasedJob(id='job-13', payload=b'stale', lease_expires_at=1000)", "now": 0, "next_id": 13, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": false}, {"id": "job-13", "payload": "b'stale'", "status": "LEASED", "worker": "worker-1", "exp": 1000, "attempts": 1, "changed": true}], "snippets": [{"file": "main.py", "start": 230, "lines": ["    s1 = q.lease(\"worker-1\", 1000)"]}, {"file": "solution/queue.py", "start": 145, "lines": ["            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1"]}]}, {"title": "Clock at 2000", "story": "Level 1 advances the clock: now becomes 2000 while job-13 stays LEASED by worker-1 past lease_expires_at 1000, the same leftover lease a Worker.tick crash leaves by returning before ack.", "input": "clock.advance(2000)", "output": "None", "now": 2000, "next_id": 13, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": false}, {"id": "job-13", "payload": "b'stale'", "status": "LEASED", "worker": "worker-1", "exp": 1000, "attempts": 1, "changed": false}], "snippets": [{"file": "main.py", "start": 234, "lines": ["    clock.advance(2000)"]}, {"file": "main.py", "start": 14, "lines": ["    def advance(self, delta_ms: int) -> None:", "        self._now += delta_ms"]}, {"file": "main.py", "start": 90, "lines": ["        if self.failures.should_crash():", "            return True"], "note": "Not called by level 1. A crash returns before ack"}]}, {"title": "Reclaim and lease again", "story": "lease reclaims job-13 to PENDING because 2000 >= 1000, then gives that same id to worker-2 with attempts 2 and lease_expires_at 7000.", "input": "s2 = q.lease(\"worker-2\", 5000)", "output": "LeasedJob(id='job-13', payload=b'stale', lease_expires_at=7000)", "now": 2000, "next_id": 13, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": false}, {"id": "job-13", "payload": "b'stale'", "status": "LEASED", "worker": "worker-2", "exp": 7000, "attempts": 2, "changed": true}], "snippets": [{"file": "main.py", "start": 235, "lines": ["    s2 = q.lease(\"worker-2\", 5000)"]}, {"file": "solution/queue.py", "start": 57, "lines": ["        now = self.clock.now()", "        moved = False", "        for job in self.jobs.values():", "            if job.status == \"LEASED\" and now >= job.lease_expires_at:", "                job.status = \"PENDING\"", "                job.worker_id = \"\"", "                job.lease_expires_at = 0", "                moved = True", "        if moved:", "            self._persist()"]}, {"file": "solution/queue.py", "start": 145, "lines": ["            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1"]}]}, {"title": "Stale ack", "story": "ack from worker-1 raises ValueError, and job-13 stays LEASED by worker-2.", "input": "q.ack(\"worker-1\", s1.id)", "output": "ValueError: Stale Ack rejected: worker worker-1 does not hold active lease for job-13", "now": 2000, "next_id": 13, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": false}, {"id": "job-13", "payload": "b'stale'", "status": "LEASED", "worker": "worker-2", "exp": 7000, "attempts": 2, "changed": false}], "snippets": [{"file": "main.py", "start": 238, "lines": ["            q.ack(\"worker-1\", s1.id)"]}, {"file": "solution/queue.py", "start": 174, "lines": ["        if job.status != \"LEASED\" or job.worker_id != worker_id:", "            raise ValueError(", "                f\"Stale Ack rejected: worker {worker_id} does not hold active lease for {job_id}\"", "            )"]}]}, {"title": "Ack job-13", "story": "worker-2 acks job-13, so it is COMPLETED with a cleared worker, deadline 0, and attempts 2.", "input": "q.ack(\"worker-2\", s2.id)", "output": "None", "now": 2000, "next_id": 13, "max_attempts": "None", "path": "None", "queue_note": null, "rows": [{"id": "job-1", "payload": "b'hello'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-2", "payload": "b'job-0'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-3", "payload": "b'job-1'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-4", "payload": "b'job-2'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-5", "payload": "b'job-3'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-6", "payload": "b'job-4'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-7", "payload": "b'job-5'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-8", "payload": "b'job-6'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-9", "payload": "b'job-7'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-10", "payload": "b'job-8'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-11", "payload": "b'job-9'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": false}, {"id": "job-12", "payload": "b'to-fail'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": false}, {"id": "job-13", "payload": "b'stale'", "status": "COMPLETED", "worker": "\"\"", "exp": 0, "attempts": 2, "changed": true}], "snippets": [{"file": "main.py", "start": 242, "lines": ["        q.ack(\"worker-2\", s2.id)"]}, {"file": "solution/queue.py", "start": 179, "lines": ["        job.status = \"COMPLETED\"", "        job.worker_id = \"\"", "        job.lease_expires_at = 0", "        self._persist()"]}]}, {"title": "Optional: attempt cap", "story": "Optional, not in main.py. A new queue with max_attempts 1 leases once so attempts becomes 1, fail returns it to PENDING, and the next lease checks attempts before incrementing: 1 is already at the cap, so the job becomes EXHAUSTED and lease returns None. attempts stays 1. Exhausted is 1 and pending is 0.", "input": "New(clock, max_attempts=1)\nq.enqueue(b\"hello\")\nq.lease(\"worker-1\", 5000)\nq.fail(\"worker-1\", \"job-1\")\nq.lease(\"worker-1\", 5000)", "output": "None\npending 0, exhausted 1", "now": 0, "next_id": 1, "max_attempts": "1", "path": "None", "queue_note": "New queue, separate from level 1.", "rows": [{"id": "job-1", "payload": "b'hello'", "status": "EXHAUSTED", "worker": "\"\"", "exp": 0, "attempts": 1, "changed": true}], "snippets": [{"file": "solution/queue.py", "start": 139, "lines": ["            # The lease that reaches max_attempts still runs. A later PENDING visit stops.", "            if self.max_attempts is not None and job.attempts >= self.max_attempts:", "                job.status = \"EXHAUSTED\"", "                self._persist()", "                continue", "", "            job.status = \"LEASED\"", "            job.worker_id = worker_id", "            job.lease_expires_at = self.clock.now() + lease_ms", "            job.attempts += 1"]}]}, {"title": "Optional: reload from a path", "story": "Optional, not in main.py. enqueue on New(clock, path=\"jobs.json\") writes the row, a new New(clock, path=\"jobs.json\") loads that same job-1 PENDING row with next_id 1, and New(clock) with path None writes no file.", "input": "q = New(clock, path=\"jobs.json\")\nq.enqueue(b\"hello\")\nq2 = New(clock, path=\"jobs.json\")", "output": "next_id 1\n{\"next_id\": 1, \"jobs\": [{\"id\": \"job-1\", \"payload\": \"aGVsbG8=\", \"status\": \"PENDING\", \"worker_id\": \"\", \"lease_expires_at\": 0, \"attempts\": 0}]}", "now": 0, "next_id": 1, "max_attempts": "None", "path": "\"jobs.json\"", "queue_note": "New queue loaded from the path. Separate from level 1.", "rows": [{"id": "job-1", "payload": "b'hello'", "status": "PENDING", "worker": "\"\"", "exp": 0, "attempts": 0, "changed": true}], "snippets": [{"file": "solution/queue.py", "start": 68, "lines": ["    def _persist(self) -> None:", "        if self.path is None:", "            return"]}, {"file": "solution/queue.py", "start": 71, "lines": ["        blob = {", "            \"next_id\": self.next_id,", "            \"jobs\": [", "                {", "                    \"id\": job.id,", "                    \"payload\": base64.b64encode(job.payload).decode(\"ascii\"),", "                    \"status\": job.status,", "                    \"worker_id\": job.worker_id,", "                    \"lease_expires_at\": job.lease_expires_at,", "                    \"attempts\": job.attempts,", "                }", "                for job in self.jobs.values()", "            ],", "        }"]}, {"file": "solution/queue.py", "start": 96, "lines": ["    def _load(self) -> None:", "        if self.path is None or not os.path.isfile(self.path):", "            return", "        if os.path.getsize(self.path) == 0:", "            return", "        with open(self.path, encoding=\"utf-8\") as fh:", "            data = json.load(fh)", "        self.next_id = data[\"next_id\"]", "        self.jobs = {}", "        for raw in data[\"jobs\"]:", "            job = JobRecord(", "                id=raw[\"id\"],", "                payload=base64.b64decode(raw[\"payload\"]),", "                status=raw[\"status\"],", "                worker_id=raw[\"worker_id\"],", "                lease_expires_at=raw[\"lease_expires_at\"],", "                attempts=raw[\"attempts\"],", "            )", "            self.jobs[job.id] = job"]}]}];
+  var index = 0;
+  var buttons = [];
+  var pos = document.getElementById("pos");
+  var title = document.getElementById("title");
+  var story = document.getElementById("story");
+  var input = document.getElementById("input");
+  var output = document.getElementById("output");
+  var meta = document.getElementById("meta");
+  var note = document.getElementById("queue-note");
+  var jobs = document.getElementById("jobs");
+  var code = document.getElementById("code");
+  var prev = document.getElementById("prev");
+  var next = document.getElementById("next");
+  var list = document.getElementById("list");
+
+  function show(i, scroll) {
+    if (i < 0 || i >= steps.length) return;
+    index = i;
+    var step = steps[i];
+    pos.textContent = "Step " + (i + 1) + " of " + steps.length;
+    title.textContent = step.title;
+    story.textContent = step.story;
+    input.textContent = step.input;
+    output.textContent = step.output;
+    meta.textContent = "now " + step.now + " · next_id " + step.next_id + " · max_attempts " + step.max_attempts + " · path " + step.path;
+    if (step.queue_note) {
+      note.hidden = false;
+      note.textContent = step.queue_note;
+    } else {
+      note.hidden = true;
+      note.textContent = "";
+    }
+    jobs.replaceChildren();
+    if (step.rows.length === 0) {
+      var empty = document.createElement("tr");
+      var cell = document.createElement("td");
+      cell.colSpan = 6;
+      cell.textContent = "jobs is empty.";
+      empty.appendChild(cell);
+      jobs.appendChild(empty);
+    } else {
+      step.rows.forEach(function (row) {
+        var tr = document.createElement("tr");
+        if (row.changed) tr.className = "changed";
+        ["id", "payload", "status", "worker", "exp", "attempts"].forEach(function (key) {
+          var td = document.createElement("td");
+          var cls = [];
+          if (key === "exp" || key === "attempts") cls.push("num");
+          if (key !== "status") cls.push("mono");
+          td.className = cls.join(" ");
+          var value = row[key];
+          if (key === "worker") value = row.worker;
+          td.textContent = String(value);
+          if (key === "id" && row.changed) {
+            var mark = document.createElement("span");
+            mark.className = "sr-only";
+            mark.textContent = ", changed";
+            td.appendChild(mark);
+          }
+          tr.appendChild(td);
+        });
+        jobs.appendChild(tr);
+      });
+    }
+    code.replaceChildren();
+    step.snippets.forEach(function (snip) {
+      var fig = document.createElement("figure");
+      var cap = document.createElement("figcaption");
+      var end = snip.start + snip.lines.length - 1;
+      var label = snip.file + ", " + (snip.lines.length === 1 ? "line " + snip.start : "lines " + snip.start + "–" + end);
+      if (snip.note) label += ". " + snip.note;
+      cap.textContent = label;
+      var grid = document.createElement("div");
+      grid.className = "code-grid";
+      var lns = document.createElement("pre");
+      lns.className = "lns";
+      var src = document.createElement("pre");
+      var numbers = [];
+      for (var n = 0; n < snip.lines.length; n++) numbers.push(String(snip.start + n));
+      lns.textContent = numbers.join("\n");
+      src.textContent = snip.lines.join("\n");
+      grid.appendChild(lns);
+      grid.appendChild(src);
+      fig.appendChild(cap);
+      fig.appendChild(grid);
+      code.appendChild(fig);
+    });
+    prev.disabled = index === 0;
+    next.disabled = index === steps.length - 1;
+    buttons.forEach(function (b, n) {
+      if (n === index) b.setAttribute("aria-current", "step");
+      else b.removeAttribute("aria-current");
+    });
+    if (scroll) title.scrollIntoView({ block: "start", behavior: "auto" });
+  }
+
+  steps.forEach(function (step, i) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = (i + 1) + ". " + step.title;
+    b.addEventListener("click", function () { show(i, true); });
+    li.appendChild(b);
+    list.appendChild(li);
+    buttons.push(b);
+  });
+  prev.addEventListener("click", function () { show(index - 1, false); });
+  next.addEventListener("click", function () { show(index + 1, false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); show(index + 1, true); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); show(index - 1, true); }
+  });
+  show(0, false);
+})();
+</script>
+</body>
+</html>
