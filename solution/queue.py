@@ -69,8 +69,18 @@ class JobQueue:
         if self.path is None: #when can this happen in real world scenario ? if the path is not set then the queue is not persistent
             return
         blob = {
-            "next_id": self.next_id, # this is the next id for the job , we need this because we want to generate unique ids for the jobs
-            "jobs": [job for job in self.jobs.values()], # this is the list of jobs in the queue
+            "next_id": self.next_id,
+            "jobs": [
+                {
+                    "id": job.id,
+                    "payload": base64.b64encode(job.payload).decode("ascii"),
+                    "status": job.status,
+                    "worker_id": job.worker_id,
+                    "lease_expires_at": job.lease_expires_at,
+                    "attempts": job.attempts,
+                }
+                for job in self.jobs.values()
+            ],
         }
         directory = os.path.dirname(self.path) or "."
         fd, tmp = tempfile.mkstemp(dir=directory)
@@ -92,6 +102,7 @@ class JobQueue:
             data = json.load(fh)
         self.next_id = data["next_id"]
         self.jobs = {}
+        released = False
         for raw in data["jobs"]:
             job = JobRecord(
                 id=raw["id"],
@@ -101,7 +112,14 @@ class JobQueue:
                 lease_expires_at=raw["lease_expires_at"],
                 attempts=raw["attempts"],
             )
+            if job.status == "LEASED":
+                job.status = "PENDING"
+                job.worker_id = ""
+                job.lease_expires_at = 0
+                released = True
             self.jobs[job.id] = job
+        if released:
+            self._persist()
 
     def enqueue(self, payload: bytes) -> str:
         """Stores a new job in PENDING state and returns its unique ID."""

@@ -157,7 +157,7 @@ def level1() -> None:
     section("Level 1: Basic YODOQ Operations")
 
     clock = TestClock()
-    q = solution.New(clock)
+    q = solution.New(clock, path="jobs.json")
 
     info("Testing enqueue + lease + ack...")
     try:
